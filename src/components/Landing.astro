@@ -18,9 +18,12 @@ import background from "../assets/background.svg";
             const wasm = await WebAssembly.instantiateStreaming(
                 fetch("../public/main.wasm"),
             );
+
             const sudoku = gen_sudoku(wasm);
+            console.log(sudoku);
+
             let hero = document.querySelector("#hero");
-            hero.innerHTML = `<h1>${formatSudoku(sudoku)}</h1>`;
+            hero.innerHTML = `<h1>${formatSudoku(sudoku[0])}</h1>`;
             hero.style.fontFamily = "monospace";
         </script>
 
