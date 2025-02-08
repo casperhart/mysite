@@ -1,3 +1,4 @@
+// comptime mapping of units (square : (rows, columns, boxes)) and (square: peers)
 fn get_units() [81][3][9]usize {
     @setEvalBranchQuota(5000);
     var u: [81][3][9]usize = undefined;
@@ -35,9 +36,7 @@ fn get_units() [81][3][9]usize {
     return u;
 }
 
-pub const units = get_units();
-
-fn get_peers(u: [81][3][9]usize) [81][20]usize {
+fn get_peers(u: *const [81][3][9]usize) [81][20]usize {
     @setEvalBranchQuota(100000);
     // get unique peers across rows, cells, boxes
     var p: [81][20]usize = undefined;
@@ -81,4 +80,5 @@ fn get_peers(u: [81][3][9]usize) [81][20]usize {
     return p;
 }
 
-pub const peers = get_peers(units);
+pub const units = get_units();
+pub const peers = get_peers(&units);
