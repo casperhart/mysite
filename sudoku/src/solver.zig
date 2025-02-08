@@ -1,27 +1,19 @@
 const std = @import("std");
 const testing = std.testing;
+const grid = @import("grid.zig");
 
-// fn crossProduct(comptime N: usize, comptime M: usize, arr1: [N]u8, arr2: [M]u8) [N * M][2]u8 {
-//     var result: [N * M][2]u8 = undefined;
-//     var index: usize = 0;
-
-//     for (arr2) |ch1| {
-//         for (arr1) |ch2| {
-//             result[index] = .{ ch1, ch2 };
-//             index += 1;
-//         }
-//     }
-//     return result;
-// }
-//
-//
 const SudokuError = error{Contradiction};
 
 const Candidates = struct {
     data: usize,
 
-    pub fn init() Candidates {
+    pub fn init_empty() Candidates {
         const data: usize = @as(usize, 0b111111111);
+        return Candidates{ .data = data };
+    }
+
+    pub fn init_value(value: usize) Candidates {
+        const data: usize = @as(usize, 1) << @truncate(value);
         return Candidates{ .data = data };
     }
 
@@ -29,33 +21,43 @@ const Candidates = struct {
         return self.data >> @truncate(digit - 1) & 1 == 1;
     }
 
-    pub fn remove(self: *Candidates, digit: usize) void {
-        self.data &= ~(std.math.pow(usize, 2, digit - 1));
+    pub fn eliminate(self: *Candidates, digit: usize) void {
+        // self.data &= ~(std.math.pow(usize, 2, digit - 1));
+        //const
+        self.data &= ~(@as(usize, 1) << @truncate(digit - 1));
     }
 
-    pub fn fill(self: *Candidates, digit: u8) SudokuError!void {
-        //std.debug.print("self: {}, digit: {}, contains: {}", .{ self, digit, self.contains(digit) });
-
-        if (!self.contains(digit)) {
-            return SudokuError.Contradiction;
+    pub fn len(self: *Candidates) u8 {
+        var l = 0;
+        for (0..9) |i| {
+            l += (self.data >> i) & 1;
         }
-        for (1..10) |d| {
-            if (d != digit) {
-                self.remove(d);
-            }
-        }
+        return l;
     }
 
-    pub fn repr(self: *const Candidates) void {
-        var s: [9]u8 = undefined;
-        var i: u6 = 0;
-        while (i < 9) : (i += 1) {
-            if ((self.data >> i) & 1 == 1) {
-                s[i] = i + '0';
-            }
-        }
-        return std.fmt.formatText(s, "{}");
-    }
+    // pub fn fill(self: *Candidates, digit: u8) SudokuError!void {
+    //     //std.debug.print("self: {}, digit: {}, contains: {}", .{ self, digit, self.contains(digit) });
+
+    //     if (!self.contains(digit)) {
+    //         return SudokuError.Contradiction;
+    //     }
+    //     for (1..10) |d| {
+    //         if (d != digit) {
+    //             self.eliminate(d);
+    //         }
+    //     }
+    // }
+
+    // pub fn repr(self: *const Candidates) void {
+    //     var s: [9]u8 = undefined;
+    //     var i: u6 = 0;
+    //     while (i < 9) : (i += 1) {
+    //         if ((self.data >> i) & 1 == 1) {
+    //             s[i] = i + '0';
+    //         }
+    //     }
+    //     return std.fmt.formatText(s, "{}");
+    // }
 
     pub fn print(self: *const Candidates) void {
         var i: u6 = 0;
@@ -70,6 +72,8 @@ const Candidates = struct {
 };
 
 const Sudoku = struct {
+    peers: *const [81][20]usize,
+    units: *const [81][3][9]usize,
     puzzle: *const [81]u8,
     solution: [81]u8,
     candidates: [81]Candidates,
@@ -77,17 +81,26 @@ const Sudoku = struct {
     fn new(puzzle: *const [81]u8) Sudoku {
         var candidates: [81]Candidates = undefined;
         for (0..81) |i| {
-            candidates[i] = Candidates.init();
+            if (puzzle[i] == '.' or puzzle[i] == '0') {
+                candidates[i] = Candidates.init_empty();
+            } else if (puzzle[i] - '0' >= 1 and puzzle[i] - '1' <= 9) {
+                candidates[i] = Candidates.init_value(puzzle[i] - '1');
+            }
         }
-        return Sudoku{ .puzzle = puzzle, .solution = undefined, .candidates = candidates };
+
+        return Sudoku{ .peers = &grid.peers, .units = &grid.units, .puzzle = puzzle, .solution = undefined, .candidates = candidates };
     }
 
-    fn eliminate(self: *Sudoku, s: usize, d: u8) void {
-        self.candidates[s].remove(d);
+    fn constrain(self: *Sudoku) void {
+        for (self.candidates) |c| {
+            if (c.len() == 1) {
+                self.fill(c, c.get());
+            }
+        }
     }
 
-    fn fill(self: *Sudoku, s: usize, d: u8) void {
-        self.candidates[s].fill(d);
+    fn fill(self: *Sudoku, square: usize) void {
+        std.debug.print("{}{}", .{ self, square });
     }
 
     fn print(self: *const Sudoku) void {
@@ -111,29 +124,40 @@ const Sudoku = struct {
             }
         }
     }
+    fn print_cell(self: *const Sudoku, cell: usize) void {
+        for (0..9) |row| {
+            for (0..9) |col| {
+                var exists = false;
+                for (self.peers[cell]) |val| {
+                    if (row * 9 + col == val) {
+                        exists = true;
+                        break;
+                    }
+                }
+                if (exists) {
+                    std.debug.print("X ", .{});
+                } else {
+                    std.debug.print(". ", .{});
+                }
+            }
+            std.debug.print("\n", .{});
+        }
+    }
 };
 
-//const Solver = struct { digits: [9]u8, rows: [9]u8, cols: [9]u8, all_squares: [81][2]u8, sudoku: Sudoku };
-
-pub fn main() !void {
+pub fn main() void {
     var sudoku = Sudoku.new("1" ** 81);
-    std.debug.print("{}", .{!sudoku.candidates[0].contains(6)});
-    try sudoku.candidates[0].fill(6);
-
-    // try sudoku.candidates[0].fill(6) catch std.debug.print("{}", .{sudoku.candidates[0]});
-    // try sudoku.candidates[2].fill(4) catch 0;
-    // try sudoku.candidates[8].fill(4) catch 0;
-
     sudoku.print();
+    sudoku.print_cell(10);
 }
 
 test "candidates" {
-    var c = Candidates.init();
+    var c = Candidates.init_empty();
     try testing.expect(c.contains(1));
-    c.remove(1);
+    c.eliminate(1);
     try testing.expect(!c.contains(1));
     try testing.expect(c.contains(5));
-    c.remove(5);
+    c.eliminate(5);
     try testing.expect(!c.contains(5));
     c.print();
 }
