@@ -1,0 +1,201 @@
+---
+import background from "../assets/background.svg";
+---
+
+<div id="container">
+    <!-- <img id="background" src={background.src} alt="" fetchpriority="high" /> -->
+    <main>
+        <div class="options-form">
+            <label for="difficulty">Difficulty</label>
+            <select id="difficulty">
+                <option value="easy">Easy</option>
+                <option value="medium">Medium</option>
+                <option value="hard">Hard</option>
+                <option value="any">Any</option>
+            </select>
+
+            <label for="number">Number:</label>
+            <select id="number">
+                {
+                    [1, 2, 4, 8, 10, 20, 40, 80, 100, 200, 400].map((num) => (
+                        <option value={num}>{num}</option>
+                    ))
+                }
+            </select>
+
+            <button id="generate">Generate</button>
+        </div>
+        <div id="sudoku-container"></div>
+    </main>
+</div>
+
+<script>
+    import initSync from "sudoku_wasm";
+    let wasm = await initSync();
+    import { generate_sudoku } from "sudoku_wasm";
+
+    let button = document.getElementById("generate")! as HTMLButtonElement;
+    let difficulty = document.getElementById("difficulty")!;
+    let number = document.getElementById("number");
+
+    button.onclick = () => {
+        document.querySelectorAll(".sudoku").forEach((e) => e.remove());
+
+        let sudoku_strs = [];
+        for (let step = 0; step < number.value; step++) {
+            sudoku_strs.push(generate_sudoku(difficulty.value));
+        }
+
+        let container = document.getElementById("sudoku-container");
+
+        sudoku_strs.map((sudokuStr, idx) => {
+            const rows = [];
+            for (let i = 0; i < 9; i++) {
+                rows.push(sudokuStr.slice(i * 9, (i + 1) * 9).split(""));
+            }
+
+            let sudoku_div = document.createElement("div");
+            sudoku_div.setAttribute("class", "sudoku");
+            // sudoku_div.style.gridRow = `${Math.floor(idx / 2) + 1}/${Math.floor(idx / 2) + 1}`;
+            // sudoku_div.style.gridColumn = `${idx % 2}/${idx % 2}`;
+
+            let table = document.createElement("table");
+            table.setAttribute("class", "sudoku");
+            sudoku_div.appendChild(table);
+
+            let tbody = document.createElement("tbody");
+            table.appendChild(tbody);
+
+            rows.forEach((row) => {
+                let tr = document.createElement("tr");
+                tr.setAttribute("class", "sudoku");
+                row.forEach((value) => {
+                    let td = document.createElement("td");
+                    td.setAttribute("class", "sudoku");
+                    td.innerText = value !== "." ? value : "";
+                    tr.appendChild(td);
+                });
+                tbody.appendChild(tr);
+            });
+
+            container.appendChild(sudoku_div);
+        });
+    };
+    button.onclick();
+</script>
+
+<style>
+    .options-form {
+        position: fixed;
+        top: 0;
+        left: 0;
+        right: 0;
+        background-color: white;
+        padding: 1rem;
+        display: flex;
+        gap: 1rem;
+        align-items: center;
+        z-index: 100;
+        box-shadow: 0 2px 5px rgba(0, 0, 0, 0.1);
+        align-items: center;
+    }
+
+    /* #background {
+        position: fixed;
+        top: 0;
+        left: 0;
+        width: 100%;
+        height: 100%;
+        z-index: -1;
+        filter: blur(5px);
+    } */
+
+    #container {
+        font-family:
+            Inter, Roboto, "Helvetica Neue", "Arial Nova", "Nimbus Sans", Arial,
+            sans-serif;
+        height: 100%;
+    }
+
+    main {
+        height: 100%;
+        display: flex;
+        justify-content: center;
+    }
+
+    h1 {
+        font-size: 22px;
+        margin-top: 0.25em;
+    }
+
+    h2 {
+        margin: 0 0 1em;
+        font-weight: normal;
+        color: #111827;
+        font-size: 20px;
+    }
+
+    p {
+        color: #4b5563;
+        font-size: 16px;
+        line-height: 24px;
+        letter-spacing: -0.006em;
+        margin: 0;
+    }
+
+    .box {
+        padding: 16px;
+        background: rgba(255, 255, 255, 1);
+        border-radius: 16px;
+        border: 1px solid white;
+    }
+
+    table.sudoku {
+        border-collapse: collapse;
+        margin: 20px auto;
+        font-size: 30px;
+        border: 3px solid black;
+        font-family: Helvetica, sans-serif;
+    }
+    td.sudoku {
+        width: 60px;
+        height: 60px;
+        text-align: center;
+        border: 1px solid black;
+    }
+    /* Bold borders for 3x3 subgrids */
+    td.sudoku:nth-child(3n) {
+        border-right: 3px solid black;
+    }
+    tr.sudoku:nth-child(3n) td {
+        border-bottom: 3px solid black;
+    }
+    @media print {
+        @page {
+            size: auto;
+            margin-top: 0;
+            margin-bottom: 0;
+            margin-left: 0mm;
+            margin-right: 0mm;
+            paddin: 0;
+        }
+        .options-form {
+            display: none;
+        }
+
+        div.sudoku {
+            width: 100%;
+            height: 96%;
+            break-inside: avoid;
+        }
+
+        table.sudoku {
+            font-size: 30px;
+            position: relative;
+            top: 50%;
+            -webkit-transform: translateY(-50%);
+            -ms-transform: translateY(-50%);
+            transform: translateY(-50%);
+        }
+    }
+</style>

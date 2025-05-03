@@ -6,9 +6,13 @@
     "dev": "astro dev",
     "build": "astro build",
     "preview": "astro preview",
-    "astro": "astro"
+    "astro": "astro",
+    "build-rust": "RUSTFLAGS='--cfg getrandom_backend=\"wasm_js\"' wasm-pack build --target web sudoku_wasm"
   },
   "dependencies": {
-    "astro": "^5.2.3"
+    "astro": "^5.7.8",
+    "sudoku_wasm": "file:sudoku_wasm/pkg",
+    "vite-plugin-top-level-await": "^1.5.0",
+    "vite-plugin-wasm": "^3.4.1"
   }
 }
