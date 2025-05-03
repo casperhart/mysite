@@ -1,4 +1,7 @@
 <style is:global>
+    div.sudoku {
+        margin-top: 100px;
+    }
     table.sudoku {
         border-collapse: collapse;
         margin: 20px auto;
@@ -21,14 +24,12 @@
     }
     @media print {
         @page {
+            size: auto;
             margin-top: 0;
             margin-bottom: 0;
-        }
-        @page :left {
-            margin-right: 1in;
-        }
-        @page :right {
-            margin-left: 1in;
+            margin-left: 0mm;
+            margin-right: 0mm;
+            paddin: 0;
         }
 
         div.sudoku {
@@ -38,6 +39,7 @@
         }
 
         table.sudoku {
+            font-size: 30px;
             position: relative;
             top: 50%;
             -webkit-transform: translateY(-50%);

@@ -5,60 +5,102 @@ import background from "../assets/background.svg";
 <div id="container">
     <!-- <img id="background" src={background.src} alt="" fetchpriority="high" /> -->
     <main>
+        <div class="options-form">
+            <label for="difficulty">Difficulty</label>
+            <select id="difficulty">
+                <option value="easy">Easy</option>
+                <option value="medium">Medium</option>
+                <option value="hard">Hard</option>
+                <option value="any">Any</option>
+            </select>
+
+            <label for="number">Number:</label>
+            <select id="number">
+                {
+                    [1, 2, 4, 8, 10, 20, 40, 80, 100, 200, 400].map((num) => (
+                        <option value={num}>{num}</option>
+                    ))
+                }
+            </select>
+
+            <button id="generate">Generate</button>
+        </div>
         <div id="sudoku-container"></div>
     </main>
 </div>
 
 <script>
-    const sudokuStrs = [
-        "530070000600195000098000060800060003400803001700020006060000280000419005000080079",
-        "530070000600195000098000060800060003400803001700020006060000280000419005000080079",
-        "540070000600195000098000060800060003400803001700020006060000280000419005000080079",
-        "550070000600195000098000060800060003400803001700020006060000280000419005000080079",
-        "560070000600195000098000060800060003400803001700020006060000280000419005000080079",
-        "570070000600195000098000060800060003400803001700020006060000280000419005000080079",
-        "530070000600195000098000060800060003400803001700020006060000280000419005000080079",
-    ];
+    import initSync from "sudoku_wasm";
+    let wasm = await initSync();
+    import { generate_sudoku } from "sudoku_wasm";
 
-    let container = document.getElementById("sudoku-container");
+    let button = document.getElementById("generate")! as HTMLButtonElement;
+    let difficulty = document.getElementById("difficulty")!;
+    let number = document.getElementById("number");
 
-    sudokuStrs.map((sudokuStr, idx) => {
-        const rows = [];
-        for (let i = 0; i < 9; i++) {
-            rows.push(sudokuStr.slice(i * 9, (i + 1) * 9).split(""));
+    button.onclick = () => {
+        document.querySelectorAll(".sudoku").forEach((e) => e.remove());
+
+        let sudoku_strs = [];
+        for (let step = 0; step < number.value; step++) {
+            sudoku_strs.push(generate_sudoku(difficulty.value));
         }
-        console.log(rows);
 
-        let sudoku_div = document.createElement("div");
-        sudoku_div.setAttribute("class", "sudoku");
-        // sudoku_div.style.gridRow = `${Math.floor(idx / 2) + 1}/${Math.floor(idx / 2) + 1}`;
-        // sudoku_div.style.gridColumn = `${idx % 2}/${idx % 2}`;
+        let container = document.getElementById("sudoku-container");
 
-        let table = document.createElement("table");
-        table.setAttribute("class", "sudoku");
-        sudoku_div.appendChild(table);
+        sudoku_strs.map((sudokuStr, idx) => {
+            const rows = [];
+            for (let i = 0; i < 9; i++) {
+                rows.push(sudokuStr.slice(i * 9, (i + 1) * 9).split(""));
+            }
 
-        let tbody = document.createElement("tbody");
-        table.appendChild(tbody);
+            let sudoku_div = document.createElement("div");
+            sudoku_div.setAttribute("class", "sudoku");
+            // sudoku_div.style.gridRow = `${Math.floor(idx / 2) + 1}/${Math.floor(idx / 2) + 1}`;
+            // sudoku_div.style.gridColumn = `${idx % 2}/${idx % 2}`;
 
-        rows.forEach((row) => {
-            let tr = document.createElement("tr");
-            tr.setAttribute("class", "sudoku");
-            row.forEach((value) => {
-                let td = document.createElement("td");
-                td.setAttribute("class", "sudoku");
-                td.innerText = value !== "0" ? value : "";
-                tr.appendChild(td);
+            let table = document.createElement("table");
+            table.setAttribute("class", "sudoku");
+            sudoku_div.appendChild(table);
+
+            let tbody = document.createElement("tbody");
+            table.appendChild(tbody);
+
+            rows.forEach((row) => {
+                let tr = document.createElement("tr");
+                tr.setAttribute("class", "sudoku");
+                row.forEach((value) => {
+                    let td = document.createElement("td");
+                    td.setAttribute("class", "sudoku");
+                    td.innerText = value !== "." ? value : "";
+                    tr.appendChild(td);
+                });
+                tbody.appendChild(tr);
             });
-            tbody.appendChild(tr);
-        });
 
-        container.appendChild(sudoku_div);
-    });
+            container.appendChild(sudoku_div);
+        });
+    };
+    button.onclick();
 </script>
 
 <style>
-    #background {
+    .options-form {
+        position: fixed;
+        top: 0;
+        left: 0;
+        right: 0;
+        background-color: white;
+        padding: 1rem;
+        display: flex;
+        gap: 1rem;
+        align-items: center;
+        z-index: 100;
+        box-shadow: 0 2px 5px rgba(0, 0, 0, 0.1);
+        align-items: center;
+    }
+
+    /* #background {
         position: fixed;
         top: 0;
         left: 0;
@@ -66,11 +108,12 @@ import background from "../assets/background.svg";
         height: 100%;
         z-index: -1;
         filter: blur(5px);
-    }
+    } */
 
     #container {
-        font-family: Inter, Roboto, "Helvetica Neue", "Arial Nova",
-            "Nimbus Sans", Arial, sans-serif;
+        font-family:
+            Inter, Roboto, "Helvetica Neue", "Arial Nova", "Nimbus Sans", Arial,
+            sans-serif;
         height: 100%;
     }
 
@@ -80,65 +123,9 @@ import background from "../assets/background.svg";
         justify-content: center;
     }
 
-    #hero {
-        display: flex;
-        align-items: start;
-        flex-direction: column;
-        justify-content: center;
-        padding: 16px;
-    }
-
     h1 {
         font-size: 22px;
         margin-top: 0.25em;
-    }
-
-    #links {
-        display: flex;
-        gap: 16px;
-    }
-
-    #links a {
-        display: flex;
-        align-items: center;
-        padding: 10px 12px;
-        color: #111827;
-        text-decoration: none;
-        transition: color 0.2s;
-    }
-
-    #links a:hover {
-        color: rgb(78, 80, 86);
-    }
-
-    #links a svg {
-        height: 1em;
-        margin-left: 8px;
-    }
-
-    #links a.button {
-        color: white;
-        background: linear-gradient(83.21deg, #3245ff 0%, #bc52ee 100%);
-        box-shadow:
-            inset 0 0 0 1px rgba(255, 255, 255, 0.12),
-            inset 0 -2px 0 rgba(0, 0, 0, 0.24);
-        border-radius: 10px;
-    }
-
-    #links a.button:hover {
-        color: rgb(230, 230, 230);
-        box-shadow: none;
-    }
-
-    pre {
-        font-family: ui-monospace, "Cascadia Code", "Source Code Pro", Menlo,
-            Consolas, "DejaVu Sans Mono", monospace;
-        font-weight: normal;
-        background: linear-gradient(14deg, #d83333 0%, #f041ff 100%);
-        -webkit-background-clip: text;
-        -webkit-text-fill-color: transparent;
-        background-clip: text;
-        margin: 0;
     }
 
     h2 {
@@ -156,17 +143,6 @@ import background from "../assets/background.svg";
         margin: 0;
     }
 
-    code {
-        display: inline-block;
-        background:
-            linear-gradient(66.77deg, #f3cddd 0%, #f5cee7 100%) padding-box,
-            linear-gradient(155deg, #d83333 0%, #f041ff 18%, #f5cee7 45%)
-                border-box;
-        border-radius: 8px;
-        border: 1px solid transparent;
-        padding: 6px 8px;
-    }
-
     .box {
         padding: 16px;
         background: rgba(255, 255, 255, 1);
@@ -174,54 +150,52 @@ import background from "../assets/background.svg";
         border: 1px solid white;
     }
 
-    #news {
-        position: absolute;
-        bottom: 16px;
-        right: 16px;
-        max-width: 300px;
-        text-decoration: none;
-        transition: background 0.2s;
-        backdrop-filter: blur(50px);
+    table.sudoku {
+        border-collapse: collapse;
+        margin: 20px auto;
+        font-size: 30px;
+        border: 3px solid black;
+        font-family: Helvetica, sans-serif;
     }
-
-    #news:hover {
-        background: rgba(255, 255, 255, 0.55);
+    td.sudoku {
+        width: 60px;
+        height: 60px;
+        text-align: center;
+        border: 1px solid black;
     }
-
-    @media screen and (max-height: 368px) {
-        #news {
+    /* Bold borders for 3x3 subgrids */
+    td.sudoku:nth-child(3n) {
+        border-right: 3px solid black;
+    }
+    tr.sudoku:nth-child(3n) td {
+        border-bottom: 3px solid black;
+    }
+    @media print {
+        @page {
+            size: auto;
+            margin-top: 0;
+            margin-bottom: 0;
+            margin-left: 0mm;
+            margin-right: 0mm;
+            paddin: 0;
+        }
+        .options-form {
             display: none;
         }
-    }
 
-    @media screen and (max-width: 768px) {
-        #container {
-            display: flex;
-            flex-direction: column;
+        div.sudoku {
+            width: 100%;
+            height: 96%;
+            break-inside: avoid;
         }
 
-        #hero {
-            display: block;
-            padding-top: 10%;
-        }
-
-        #links {
-            flex-wrap: wrap;
-        }
-
-        #links a.button {
-            padding: 14px 18px;
-        }
-
-        #news {
-            right: 16px;
-            left: 16px;
-            bottom: 2.5rem;
-            max-width: 100%;
-        }
-
-        h1 {
-            line-height: 1.5;
+        table.sudoku {
+            font-size: 30px;
+            position: relative;
+            top: 50%;
+            -webkit-transform: translateY(-50%);
+            -ms-transform: translateY(-50%);
+            transform: translateY(-50%);
         }
     }
 </style>

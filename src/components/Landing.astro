@@ -5,27 +5,12 @@ import background from "../assets/background.svg";
 <div id="container">
     <img id="background" src={background.src} alt="" fetchpriority="high" />
     <main>
+        <script></script>
         <section id="hero">
-            <h1>Click to generate</h1>
+            <form action="mysite/sudoku.html">
+                <input type="submit" value="Sudoku Generator" />
+            </form>
         </section>
-        <section id="links">
-            <a id="news" href="sudoku.html">Click me</a>
-        </section>
-
-        <script src="../scripts/sudoku.js"></script>
-        <script>
-            import { gen_sudoku, formatSudoku } from "../scripts/sudoku.js";
-            const wasm = await WebAssembly.instantiateStreaming(
-                fetch("../public/main.wasm"),
-            );
-
-            const sudoku = gen_sudoku(wasm);
-            console.log(sudoku);
-
-            let hero = document.querySelector("#hero");
-            hero.innerHTML = `<h1>${formatSudoku(sudoku[0])}</h1>`;
-            hero.style.fontFamily = "monospace";
-        </script>
 
         <style>
             #background {
@@ -39,7 +24,8 @@ import background from "../assets/background.svg";
             }
 
             #container {
-                font-family: Inter, Roboto, "Helvetica Neue", "Arial Nova",
+                font-family:
+                    Inter, Roboto, "Helvetica Neue", "Arial Nova",
                     "Nimbus Sans", Arial, sans-serif;
                 height: 100%;
             }
@@ -101,8 +87,9 @@ import background from "../assets/background.svg";
             }
 
             pre {
-                font-family: ui-monospace, "Cascadia Code", "Source Code Pro",
-                    Menlo, Consolas, "DejaVu Sans Mono", monospace;
+                font-family:
+                    ui-monospace, "Cascadia Code", "Source Code Pro", Menlo,
+                    Consolas, "DejaVu Sans Mono", monospace;
                 font-weight: normal;
                 background: linear-gradient(14deg, #d83333 0%, #f041ff 100%);
                 -webkit-background-clip: text;

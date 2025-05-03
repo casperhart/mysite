@@ -1,0 +1,3 @@
+[submodule "sudoku_wasm"]
+	path = sudoku_wasm
+	url = https://github.com/casperhart/sudoku_wasm.git
