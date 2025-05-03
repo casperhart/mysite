@@ -14,5 +14,8 @@
     "sudoku_wasm": "file:sudoku_wasm/pkg",
     "vite-plugin-top-level-await": "^1.5.0",
     "vite-plugin-wasm": "^3.4.1"
+  },
+  "optionalDependencies": {
+    "@rollup/rollup-linux-x64-gnu": "4.40.1"
   }
 }
