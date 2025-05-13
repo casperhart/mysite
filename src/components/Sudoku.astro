@@ -23,7 +23,9 @@ import background from "../assets/background.svg";
                 }
             </select>
 
-            <button id="generate">Generate</button>
+            <button id="generate" class="action-button">Generate</button>
+            <button id="download-pdf" class="action-button">Download PDF</button
+            >
         </div>
         <div id="sudoku-container"></div>
     </main>
@@ -33,22 +35,36 @@ import background from "../assets/background.svg";
     import initSync from "sudoku_wasm";
     let wasm = await initSync();
     import { generate_sudoku } from "sudoku_wasm";
+    import * as pdfMake from "pdfmake/build/pdfmake";
+    import * as pdfFonts from "pdfmake/build/vfs_fonts";
 
-    let button = document.getElementById("generate")! as HTMLButtonElement;
-    let difficulty = document.getElementById("difficulty")!;
-    let number = document.getElementById("number");
+    (pdfMake as any).addVirtualFileSystem(pdfFonts);
 
-    button.onclick = () => {
+    let generateButton = document.getElementById(
+        "generate",
+    )! as HTMLButtonElement;
+    let downloadPdfButton = document.getElementById(
+        "download-pdf",
+    )! as HTMLButtonElement;
+    let difficulty = document.getElementById(
+        "difficulty",
+    )! as HTMLSelectElement;
+    let number = document.getElementById("number")! as HTMLSelectElement;
+
+    // Store generated sudoku data for PDF generation
+    let generatedSudokus: string[] = [];
+
+    generateButton.onclick = () => {
+        generatedSudokus = [];
         document.querySelectorAll(".sudoku").forEach((e) => e.remove());
-
-        let sudoku_strs = [];
-        for (let step = 0; step < number.value; step++) {
-            sudoku_strs.push(generate_sudoku(difficulty.value));
+        for (let step = 0; step < parseInt(number.value); step++) {
+            generatedSudokus.push(generate_sudoku(difficulty.value));
         }
 
-        let container = document.getElementById("sudoku-container");
+        // Store the generated sudokus for PDF generation
 
-        sudoku_strs.map((sudokuStr, idx) => {
+        let container = document.getElementById("sudoku-container")!;
+        generatedSudokus.map((sudokuStr, idx) => {
             const rows = [];
             for (let i = 0; i < 9; i++) {
                 rows.push(sudokuStr.slice(i * 9, (i + 1) * 9).split(""));
@@ -81,7 +97,122 @@ import background from "../assets/background.svg";
             container.appendChild(sudoku_div);
         });
     };
-    button.onclick();
+    generateButton.onclick();
+
+    // Function to generate PDF from sudoku data
+    downloadPdfButton.onclick = () => {
+        if (generatedSudokus.length === 0) {
+            alert("Please generate sudokus first!");
+            return;
+        }
+
+        const docDefinition = {
+            pageSize: "A4",
+            pageMargins: [40, 60, 40, 60],
+            content: [] as any[],
+            styles: {
+                header: {
+                    fontSize: 22,
+                    bold: true,
+                    margin: [0, 10, 0, 20],
+                },
+                sudokuTitle: {
+                    fontSize: 16,
+                    bold: true,
+                    margin: [0, 10, 0, 10],
+                },
+                footer: {
+                    fontSize: 10,
+                    margin: [0, 10, 0, 0],
+                    color: "#777777",
+                },
+            },
+        };
+
+        // Generate PDF content for each sudoku
+        generatedSudokus.forEach((sudokuStr, index) => {
+            const rows = [];
+            for (let i = 0; i < 9; i++) {
+                rows.push(sudokuStr.slice(i * 9, (i + 1) * 9).split(""));
+            }
+
+            let tableBody: any[][] = [];
+
+            // Add row headers
+            rows.forEach((row, rowIndex) => {
+                const tableRow: any[] = [];
+
+                // Add cell values for this row
+                row.forEach((cell, colIndex) => {
+                    tableRow.push({
+                        text: cell !== "." ? cell : " ",
+                        alignment: "center",
+                        fontSize: 24,
+                        margin: [4, 4, 4, 4],
+                    });
+                });
+
+                tableBody.push(tableRow);
+            });
+
+            // Add the sudoku number
+            docDefinition.content.push({
+                text: `Puzzle #${index + 1}`,
+                style: "sudokuTitle",
+                alignment: "center",
+            });
+
+            // Add the sudoku to the document with a page break after (except for the last one)
+            docDefinition.content.push({
+                layout: {
+                    hLineWidth: function (i: number, node: any) {
+                        return i === 0 || i % 3 === 0 ? 2 : 1;
+                    },
+                    vLineWidth: function (i: number, node: any) {
+                        return i === 0 || i % 3 === 0 ? 2 : 1;
+                    },
+                    paddingLeft: function () {
+                        return 8;
+                    },
+                    paddingRight: function () {
+                        return 8;
+                    },
+                    paddingTop: function () {
+                        return 8;
+                    },
+                    paddingBottom: function () {
+                        return 8;
+                    },
+                },
+                table: {
+                    body: tableBody,
+                    widths: Array(9).fill("*"),
+                },
+                width: "80%",
+                alignment: "center",
+                margin: [0, 15, 0, 30],
+            });
+
+            // Add a footer with generation info
+            docDefinition.content.push({
+                text: `Generated on ${new Date().toLocaleDateString()} - ${difficulty.value}`,
+                style: "footer",
+                alignment: "center",
+            });
+
+            // Add page break for all but the last sudoku
+            if (index < generatedSudokus.length - 1) {
+                docDefinition.content.push({ text: " ", pageBreak: "after" });
+            }
+        });
+
+        // Generate the PDF
+        pdfMake
+            .createPdf(docDefinition)
+            .download(
+                `sudoku-puzzles-${difficulty.value}-${generatedSudokus.length}.pdf`,
+            );
+    };
 </script>
 
 <style>
@@ -98,6 +229,46 @@ import background from "../assets/background.svg";
         z-index: 100;
         box-shadow: 0 2px 5px rgba(0, 0, 0, 0.1);
         align-items: center;
+    }
+
+    .action-button {
+        background-color: #3b82f6;
+        color: white;
+        border: none;
+        border-radius: 4px;
+        padding: 0.5rem 1rem;
+        font-size: 14px;
+        cursor: pointer;
+        transition: all 0.2s ease;
+        box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
+    }
+
+    .action-button:hover {
+        background-color: #2563eb;
+        transform: translateY(-1px);
+        box-shadow: 0 4px 6px rgba(0, 0, 0, 0.1);
+    }
+
+    .action-button:active {
+        transform: translateY(1px);
+        box-shadow: 0 1px 2px rgba(0, 0, 0, 0.1);
+    }
+
+    #download-pdf {
+        background-color: #10b981;
+        margin-left: 0.5rem;
+        display: flex;
+        align-items: center;
+    }
+
+    #download-pdf:hover {
+        background-color: #059669;
+    }
+
+    #download-pdf::before {
+        content: "↓";
+        margin-right: 0.25rem;
+        font-weight: bold;
     }
 
     /* #background {
@@ -177,7 +348,7 @@ import background from "../assets/background.svg";
             margin-bottom: 0;
             margin-left: 0mm;
             margin-right: 0mm;
-            paddin: 0;
+            padding: 0;
         }
         .options-form {
             display: none;
@@ -187,6 +358,7 @@ import background from "../assets/background.svg";
             width: 100%;
             height: 96%;
             break-inside: avoid;
+            page-break-inside: avoid;
         }
 
         table.sudoku {
@@ -196,6 +368,34 @@ import background from "../assets/background.svg";
             -webkit-transform: translateY(-50%);
             -ms-transform: translateY(-50%);
             transform: translateY(-50%);
+        }
+    }
+
+    @media (max-width: 768px) {
+        .options-form {
+            flex-direction: column;
+            align-items: flex-start;
+            padding: 0.75rem;
+        }
+
+        .options-form select,
+        .options-form button {
+            width: 100%;
+            margin: 0.25rem 0;
+        }
+
+        #download-pdf {
+            margin-left: 0;
+            margin-top: 0.5rem;
+        }
+
+        table.sudoku {
+            font-size: 20px;
+        }
+
+        td.sudoku {
+            width: 40px;
+            height: 40px;
         }
     }
 </style>
