@@ -18,16 +18,22 @@ import background from "../assets/background.svg";
                 <label for="number">Number:</label>
                 <select id="number">
                     {
-                        [1, 2, 4, 8, 10, 20, 40, 80, 100, 200, 400].map((num) => (
-                            <option value={num}>{num}</option>
-                        ))
+                        [1, 2, 4, 8, 10, 20, 40, 80, 100, 200, 400].map(
+                            (num) => <option value={num}>{num}</option>,
+                        )
                     }
                 </select>
 
                 <button id="generate" class="action-button">Generate</button>
             </div>
             <div class="options-right">
-                <button id="download-pdf" class="action-button">Download PDF</button
+                <label for="per-page">Page Layout:</label>
+                <select id="per-page">
+                    <option value="1">1x1</option>
+                    <option value="4">2x2</option>
+                </select>
+                <button id="download-pdf" class="action-button"
+                    >Download PDF</button
                 >
             </div>
         </div>
@@ -54,6 +60,7 @@ import background from "../assets/background.svg";
         "difficulty",
     )! as HTMLSelectElement;
     let number = document.getElementById("number")! as HTMLSelectElement;
+    let perPage = document.getElementById("per-page")! as HTMLSelectElement;
 
     // Store generated sudoku data for PDF generation
     let generatedSudokus: string[] = [];
@@ -108,6 +115,7 @@ import background from "../assets/background.svg";
             return;
         }
 
+        const sudokusPerPage = parseInt(perPage.value);
         const docDefinition = {
             pageSize: "letter",
             pageMargins: [40, 60, 40, 60],
@@ -131,81 +139,202 @@ import background from "../assets/background.svg";
             },
         };
 
-        // Generate PDF content for each sudoku
-        generatedSudokus.forEach((sudokuStr, index) => {
-            const rows = [];
-            for (let i = 0; i < 9; i++) {
-                rows.push(sudokuStr.slice(i * 9, (i + 1) * 9).split(""));
-            }
+        if (sudokusPerPage === 1) {
+            // Generate PDF content for each sudoku - 1 per page
+            generatedSudokus.forEach((sudokuStr, index) => {
+                const rows = [];
+                for (let i = 0; i < 9; i++) {
+                    rows.push(sudokuStr.slice(i * 9, (i + 1) * 9).split(""));
+                }
 
-            let tableBody: any[][] = [];
+                let tableBody: any[][] = [];
 
-            // Add row headers
-            rows.forEach((row, rowIndex) => {
-                const tableRow: any[] = [];
+                // Add row headers
+                rows.forEach((row, rowIndex) => {
+                    const tableRow: any[] = [];
 
-                // Add cell values for this row
-                row.forEach((cell, colIndex) => {
-                    tableRow.push({
-                        text: cell !== "." ? cell : " ",
-                        alignment: "center",
-                        fontSize: 24,
-                        margin: [4, 4, 4, 4],
+                    // Add cell values for this row
+                    row.forEach((cell, colIndex) => {
+                        tableRow.push({
+                            text: cell !== "." ? cell : " ",
+                            alignment: "center",
+                            fontSize: 24, // Fixed font size for single sudoku per page
+                            margin: [5, 5, 5, 5],
+                        });
                     });
+
+                    tableBody.push(tableRow);
                 });
 
-                tableBody.push(tableRow);
-            });
+                // Add the sudoku number
+                docDefinition.content.push({
+                    text: `Puzzle #${index + 1}`,
+                    style: "sudokuTitle",
+                    alignment: "center",
+                });
 
-            // Add the sudoku number
-            docDefinition.content.push({
-                text: `Puzzle #${index + 1}`,
-                style: "sudokuTitle",
-                alignment: "center",
-            });
+                // Add the sudoku to the document with a page break after (except for the last one)
+                docDefinition.content.push({
+                    layout: {
+                        hLineWidth: function (i: number, node: any) {
+                            return i === 0 || i % 3 === 0 ? 3 : 1.5;
+                        },
+                        vLineWidth: function (i: number, node: any) {
+                            return i === 0 || i % 3 === 0 ? 3 : 1.5;
+                        },
+                        paddingLeft: function () {
+                            return 8;
+                        },
+                        paddingRight: function () {
+                            return 8;
+                        },
+                        paddingTop: function () {
+                            return 8;
+                        },
+                        paddingBottom: function () {
+                            return 8;
+                        },
+                    },
+                    table: {
+                        body: tableBody,
+                        widths: Array(9).fill("*"),
+                    },
+                    width: "75%",
+                    alignment: "center",
+                    margin: [0, 15, 0, 30],
+                });
 
-            // Add the sudoku to the document with a page break after (except for the last one)
-            docDefinition.content.push({
-                layout: {
-                    hLineWidth: function (i: number, node: any) {
-                        return i === 0 || i % 3 === 0 ? 3 : 1.5;
-                    },
-                    vLineWidth: function (i: number, node: any) {
-                        return i === 0 || i % 3 === 0 ? 3 : 1.5;
-                    },
-                    paddingLeft: function () {
-                        return 8;
-                    },
-                    paddingRight: function () {
-                        return 8;
-                    },
-                    paddingTop: function () {
-                        return 8;
-                    },
-                    paddingBottom: function () {
-                        return 8;
-                    },
-                },
-                table: {
-                    body: tableBody,
-                    widths: Array(9).fill("*"),
-                },
-                width: "80%",
-                alignment: "center",
-                margin: [0, 15, 0, 30],
+                // Add page break for all but the last sudoku
+                if (index < generatedSudokus.length - 1) {
+                    docDefinition.content.push({
+                        text: " ",
+                        pageBreak: "after",
+                    });
+                }
             });
+        } else {
+            // Generate PDF content with 4 sudokus per page (2x2 grid)
+            const pageCount = Math.ceil(generatedSudokus.length / 4);
 
-            // Add a footer with generation info
-            docDefinition.content.push({
-                text: `Generated on ${new Date().toLocaleDateString()} - ${difficulty.value}`,
-                style: "footer",
-                alignment: "center",
-            });
+            for (let page = 0; page < pageCount; page++) {
+                // Create a 2x2 layout table for this page
+                const gridTable: any = {
+                    layout: "noBorders",
+                    table: {
+                        widths: ["*", "*"],
+                        body: [
+                            [{}, {}],
+                            [{}, {}],
+                        ],
+                    },
+                    margin: [0, 15, 0, 15],
+                };
 
-            // Add page break for all but the last sudoku
-            if (index < generatedSudokus.length - 1) {
-                docDefinition.content.push({ text: " ", pageBreak: "after" });
+                // Add up to 4 sudokus to this page's grid
+                for (let i = 0; i < 4; i++) {
+                    const sudokuIndex = page * 4 + i;
+                    if (sudokuIndex >= generatedSudokus.length) break;
+
+                    const sudokuStr = generatedSudokus[sudokuIndex];
+                    const rows = [];
+                    for (let r = 0; r < 9; r++) {
+                        rows.push(
+                            sudokuStr.slice(r * 9, (r + 1) * 9).split(""),
+                        );
+                    }
+
+                    let tableBody: any[][] = [];
+
+                    // Create the sudoku table
+                    rows.forEach((row, rowIndex) => {
+                        const tableRow: any[] = [];
+                        row.forEach((cell, colIndex) => {
+                            tableRow.push({
+                                text: cell !== "." ? cell : " ",
+                                alignment: "center",
+                                fontSize: 12,
+                                margin: [3, 3, 3, 3],
+                            });
+                        });
+                        tableBody.push(tableRow);
+                    });
+
+                    // Create the sudoku table with title
+                    const sudokuTable = {
+                        stack: [
+                            {
+                                text: `Puzzle #${sudokuIndex + 1}`,
+                                style: "sudokuTitle",
+                                fontSize: 12,
+                                alignment: "center",
+                                margin: [0, 5, 0, 5],
+                            },
+                            {
+                                layout: {
+                                    hLineWidth: function (
+                                        i: number,
+                                        node: any,
+                                    ) {
+                                        return i === 0 || i % 3 === 0 ? 2 : 1;
+                                    },
+                                    vLineWidth: function (
+                                        i: number,
+                                        node: any,
+                                    ) {
+                                        return i === 0 || i % 3 === 0 ? 2 : 1;
+                                    },
+                                    paddingLeft: function () {
+                                        return 4;
+                                    },
+                                    paddingRight: function () {
+                                        return 4;
+                                    },
+                                    paddingTop: function () {
+                                        return 4;
+                                    },
+                                    paddingBottom: function () {
+                                        return 4;
+                                    },
+                                },
+                                table: {
+                                    body: tableBody,
+                                    widths: Array(9).fill("*"),
+                                },
+                                margin: [5, 5, 5, 5],
+                                alignment: "center",
+                            },
+                        ],
+                    };
+
+                    // Add this sudoku to the appropriate grid cell with proper square dimensions
+                    const row = Math.floor(i / 2);
+                    const col = i % 2;
+                    gridTable.table.body[row][col] = {
+                        stack: [sudokuTable],
+                        alignment: "center",
+                        width: "*",
+                        height: "*",
+                    };
+                }
+
+                // Add the grid to the document
+                docDefinition.content.push(gridTable);
+
+                // Add page break if not the last page
+                if (page < pageCount - 1) {
+                    docDefinition.content.push({
+                        text: " ",
+                        pageBreak: "after",
+                    });
+                }
             }
+        }
+
+        // Add a footer with generation info
+        docDefinition.content.push({
+            text: `Generated on ${new Date().toLocaleDateString()} - ${difficulty.value} difficulty`,
+            style: "footer",
+            alignment: "center",
         });
 
         // Generate the PDF
@@ -230,15 +359,18 @@ import background from "../assets/background.svg";
         z-index: 100;
         box-shadow: 0 2px 5px rgba(0, 0, 0, 0.1);
     }
-    
+
     .options-left {
         display: flex;
         gap: 1rem;
         align-items: center;
     }
-    
+
     .options-right {
         margin-left: auto;
+        display: flex;
+        align-items: center;
+        gap: 1rem;
     }
 
     .action-button {
@@ -385,17 +517,19 @@ import background from "../assets/background.svg";
             flex-direction: column;
             padding: 0.75rem;
         }
-        
+
         .options-left {
             flex-direction: column;
             align-items: flex-start;
             width: 100%;
         }
-        
+
         .options-right {
             margin-left: 0;
             width: 100%;
             margin-top: 0.5rem;
+            flex-direction: column;
+            align-items: flex-start;
         }
 
         .options-form select,
